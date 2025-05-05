@@ -28,6 +28,30 @@ plot(pressure)
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ```{r}
-print("Test")
+# Step 1: Load the data
+data <- read.csv("cox-violent-parsed-filt.csv", stringsAsFactors = FALSE)
+
+# Step 2: Parse the jail_in and jail_out columns as date-time
+data$jail_in <- as.POSIXct(data$jail_in, format = "%d/%m/%Y %H:%M")
+data$jail_out <- as.POSIXct(data$jail_out, format = "%d/%m/%Y %H:%M")
+
+# Step 3: Calculate sentence duration in days
+data$sentence_days <- as.numeric(difftime(data$jail_out, data$jail_in, units = "days"))
+
+# Step 4: Clean data (remove NA or negative durations)
+data <- subset(data, !is.na(sentence_days) & sentence_days >= 0)
+
+# Step 5: View summary
+summary(data$sentence_days)
+
+# Step 6: Run a t-test comparing sentence length by gender
+t.test(sentence_days ~ sex, data = data)
+
+# Step 7: Visualize with boxplot
+boxplot(sentence_days ~ sex, data = data,
+        main = "Sentence Length by Gender (Violent Crimes)",
+        xlab = "Gender", ylab = "Sentence Length (Days)",
+        col = c("lightblue", "pink"))
+
 ```
 
