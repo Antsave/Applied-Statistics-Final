@@ -67,107 +67,69 @@ ggplot(data, aes(x = sentence_days, fill = sex)) +
        x = "Sentence Length (Days)", y = "Density") +
   theme_minimal()
 
-unique(data$c_charge_desc)
-# Drop NA sentence_days (already done if you're reusing filtered data)
+
+```
+```{r}
+# Drop NA or negative sentence lengths
 data <- data[!is.na(data$sentence_days) & data$sentence_days >= 0, ]
+
+# Ensure is_recid is numeric (if it's not already, this won't do anything harmful)
+data$is_recid <- as.numeric(as.character(data$is_recid))
+
+# Safely convert is_recid to a factor with labeled levels
+data$is_recid <- factor(data$is_recid, levels = c(0, 1),
+                        labels = c("Not_Reconvicted", "Reconvicted"))
+
+# Confirm the unique values in is_recid
+print(unique(data$is_recid))
 
 # Calculate total count by gender
 gender_counts <- table(data$sex)
 
-# Calculate proportions
+# Calculate proportions (percent of each gender)
 gender_proportions <- prop.table(gender_counts)
-
-# Print proportions as percentages
 percentages <- round(100 * gender_proportions, 2)
 print(percentages)
+
+# Create recidivism table by gender
 recid_table <- table(data$sex, data$is_recid)
-
-# Check unique values in is_recid
-unique(data$is_recid)  # should include 0 and 1
-
-# Convert is_recid to factor to ensure both levels are included
-data$is_recid <- factor(data$is_recid, levels = c(0, 1), labels = c("Not_Reconvicted", "Reconvicted"))
-
-# Create a cross-tabulation
-recid_table <- table(data$sex, data$is_recid)
-
-# Print the table
 print(recid_table)
 
+# Total number of people
+total_people <- sum(recid_table)
+cat("Total number of people:", total_people, "\n")
 
-# Filter reconvicted individuals with valid sentence_days
-reconvicted <- data[data$is_recid == 1 & data$sex %in% c("Male", "Female") & !is.na(data$sentence_days), ]
+# Total by gender
+total_by_gender <- rowSums(recid_table)
+cat("Total women:", total_by_gender["Female"], "\n")
+cat("Total men:", total_by_gender["Male"], "\n")
 
-# Reconvicted males
-male_data <- reconvicted[reconvicted$sex == "Male", ]
-male_mean <- mean(male_data$sentence_days)
-male_sd <- sd(male_data$sentence_days)
+# Total by recidivism status (optional)
+total_by_recid <- colSums(recid_table)
+cat("Not Reconvicted:", total_by_recid["Not_Reconvicted"], "\n")
+cat("Reconvicted:", total_by_recid["Reconvicted"], "\n")
 
-# Reconvicted females
-female_data <- reconvicted[reconvicted$sex == "Female", ]
-female_mean <- mean(female_data$sentence_days)
-female_sd <- sd(female_data$sentence_days)
-
-# Print results
-cat("Reconvicted Males:\n")
-cat("  Mean Sentence Length:", round(male_mean, 2), "days\n")
-cat("  Std Dev:", round(male_sd, 2), "days\n\n")
-
-cat("Reconvicted Females:\n")
-cat("  Mean Sentence Length:", round(female_mean, 2), "days\n")
-cat("  Std Dev:", round(female_sd, 2), "days\n")
-data$sentence_days <- as.numeric(difftime(data$c_jail_out, data$c_jail_in, units = "days"))
-data <- data[!is.na(data$sentence_days) & data$sentence_days >= 0, ]
 
 ```
 ```{r}
+table(data$sex, data$c_charge_desc)
 library(dplyr)
+data %>%
+  group_by(sex, c_charge_desc) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(sex, desc(count)) %>%
+  group_by(sex) %>%
+  slice_head(n = 5)
+table(data$sex, data$priors_count)  # if that column exists
+aggregate(priors_count ~ sex, data, mean)
 
-# Parse the second set of jail datetime columns for reconviction
-data$r_jail_in <- as.POSIXct(data$r_jail_in, format = "%m/%d/%Y %H:%M")
-data$r_jail_out <- as.POSIXct(data$r_jail_out, format = "%m/%d/%Y %H:%M")
 
-# Calculate sentence duration for reconvicted individuals
-data$recid_sentence_days <- as.numeric(difftime(data$r_jail_out, data$r_jail_in, units = "days"))
-
-# Filter reconvicted people with valid durations
-recid_data <- data %>%
-  filter(is_recid == "Reconvicted", sex %in% c("Male", "Female"), !is.na(recid_sentence_days), recid_sentence_days >= 0)
-
-# Calculate mean and standard deviation by gender
-mean_male <- mean(recid_data$recid_sentence_days[recid_data$sex == "Male"])
-sd_male <- sd(recid_data$recid_sentence_days[recid_data$sex == "Male"])
-
-mean_female <- mean(recid_data$recid_sentence_days[recid_data$sex == "Female"])
-sd_female <- sd(recid_data$recid_sentence_days[recid_data$sex == "Female"])
-
-# Print results
-cat("Reconvicted Males:\n")
-cat("  Mean Sentence Length:", round(mean_male, 2), "days\n")
-cat("  Std Dev:", round(sd_male, 2), "days\n\n")
-
-cat("Reconvicted Females:\n")
-cat("  Mean Sentence Length:", round(mean_female, 2), "days\n")
-cat("  Std Dev:", round(sd_female, 2), "days\n")
 
 ```
 ```{r}
-data$r_jail_in <- as.POSIXct(data$r_jail_in, format = "%m/%d/%Y %H:%M")
-data$r_jail_out <- as.POSIXct(data$r_jail_out, format = "%m/%d/%Y %H:%M")
-
-# Create a separate sentence length field for reconviction
-data$recid_sentence_days <- as.numeric(difftime(data$r_jail_out, data$r_jail_in, units = "days"))
-recid_data <- data[data$is_recid == "Reconvicted" & !is.na(data$recid_sentence_days), ]
-
-mean_male <- mean(recid_data$recid_sentence_days[recid_data$sex == "Male"])
-sd_male <- sd(recid_data$recid_sentence_days[recid_data$sex == "Male"])
-
-mean_female <- mean(recid_data$recid_sentence_days[recid_data$sex == "Female"])
-sd_female <- sd(recid_data$recid_sentence_days[recid_data$sex == "Female"])
-
-cat("Reconvicted Males:\n  Mean:", round(mean_male, 2), "days\n  SD:", round(sd_male, 2), "days\n\n")
-cat("Reconvicted Females:\n  Mean:", round(mean_female, 2), "days\n  SD:", round(sd_female, 2), "days\n")
-
+str(data$r_jail_out)
+unique(data$r_jail_out[!is.na(data$r_jail_out)][1:10])
 
 ```
+
 
