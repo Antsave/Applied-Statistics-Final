@@ -60,12 +60,7 @@ boxplot(sentence_days ~ sex, data = data,
         main = "Sentence Length (Days) by Sex",
         xlab = "Sex", ylab = "Sentence Length (Days)", col = c("lightblue", "pink"))
 
-ggplot(data, aes(x = sentence_days, fill = sex)) +
-  geom_density(alpha = 0.6, color = "black") +
-  facet_wrap(~ sex, scales = "free_y") +
-  labs(title = "Density of Sentence Length by Sex",
-       x = "Sentence Length (Days)", y = "Density") +
-  theme_minimal()
+
 
 
 ```
@@ -109,9 +104,15 @@ total_by_recid <- colSums(recid_table)
 cat("Not Reconvicted:", total_by_recid["Not_Reconvicted"], "\n")
 cat("Reconvicted:", total_by_recid["Reconvicted"], "\n")
 
+table(data$sex, data$c_charge_desc)
+
+
 
 ```
 ```{r}
+# Total charges (rows) by sex
+table(data$sex)
+
 table(data$sex, data$c_charge_desc)
 library(dplyr)
 data %>%
@@ -123,13 +124,122 @@ data %>%
 table(data$sex, data$priors_count)  # if that column exists
 aggregate(priors_count ~ sex, data, mean)
 
+library(ggplot2)
+library(dplyr)
+
+top_charges <- data %>%
+  filter(c_charge_desc %in% c("Battery", "Possession of Cocaine", 
+                              "Grand Theft in the 3rd Degree", 
+                              "Driving While License Revoked", 
+                              "Driving Under The Influence", 
+                              "arrest case no charge")) %>%
+  group_by(sex, c_charge_desc) %>%
+  summarise(count = n()) %>%
+  ungroup()
+
+ggplot(top_charges, aes(x = reorder(c_charge_desc, count), y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Top Charges by Gender", x = "Charge", y = "Count") +
+  coord_flip() +
+  theme_minimal()
 
 
 ```
 ```{r}
-str(data$r_jail_out)
-unique(data$r_jail_out[!is.na(data$r_jail_out)][1:10])
+# Calculate proportion of charges by sex
+library(dplyr)
+
+# Get total charges per gender
+total_by_gender <- data %>%
+  group_by(sex) %>%
+  summarise(total = n())
+
+# Get counts of each charge per gender
+battery_counts <- data %>%
+  filter(c_charge_desc == "Battery") %>%
+  group_by(sex) %>%
+  summarise(battery = n())
+
+# Merge and calculate percentages
+battery_rates <- left_join(battery_counts, total_by_gender, by = "sex") %>%
+  mutate(percent_battery = round(100 * battery / total, 2))
+
+print(battery_rates)
 
 ```
 
+```{r}
+str(data$r_jail_out)
+unique(data$r_jail_out[!is.na(data$r_jail_out)][1:10])
+aggregate(priors_count ~ sex, data, mean)
+model <- lm(sentence_days ~ sex + age + priors_count + c_charge_desc, data = data)
+summary(model)
+
+
+```
+```{r}
+install.packages("caret", dependencies = TRUE)
+summary(model)
+library(caret)
+step_model <- step(model)
+summary(model)
+
+```
+```{r}
+# Full model (already run by you)
+full_model <- lm(sentence_days ~ sex + age + priors_count + c_charge_desc, data = data)
+
+# Stepwise model selection using AIC
+reduced_model <- step(full_model, direction = "both")  # both forward and backward selection
+
+# View summary of the reduced model
+summary(reduced_model)
+```
+
+```{r}
+# Full model (already run by you)
+full_model <- lm(sentence_days ~ sex + age + priors_count + c_charge_desc, data = data)
+
+# Stepwise model selection using AIC
+reduced_model <- step(full_model, direction = "both")  # both forward and backward selection
+
+# View summary of the reduced model
+summary(reduced_model)
+```
+```{r}
+library(broom)
+library(dplyr)
+
+top_predictors <- tidy(full_model) %>%
+  filter(p.value < 0.05) %>%
+  arrange(p.value)
+
+head(top_predictors, 5)
+# Example based on assumed top predictors
+grep("c_charge_desc", colnames(model.matrix(full_model)), value = TRUE)[1:10]
+
+colnames(model.matrix(full_model))
+grep("c_charge_desc", colnames(model.matrix(full_model)), value = TRUE)
+vars <- grep("c_charge_desc", colnames(model.matrix(full_model)), value = TRUE)
+print(vars)
+simplified_model <- lm(sentence_days ~ priors_count +
+  `c_charge_descCorrupt.Public.Servant` +
+  `c_charge_descAggravated.Battery..Firearm.` +
+  `c_charge_descAttempted.Robbery.Firearm` +
+  `c_charge_descPoss.Alprazolam.W.int.Sell.Del`,
+  data = model.frame(full_model))
+
+
+
+
+```
+
+```{r}
+simplified_model <- lm(sentence_days ~ priors_count +
+  `c_charge_descCorrupt.Public.Servant` +
+  `c_charge_descAggravated.Battery..Firearm.` +
+  `c_charge_descAttempted.Robbery.Firearm` +
+  `c_charge_descPoss.Alprazolam.W.int.Sell.Del`,
+  data = model.frame(full_model))
+```
 
