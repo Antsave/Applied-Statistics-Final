@@ -47,6 +47,6 @@ This project explores whether gender independently influences sentencing length 
 - Dataset: `cox-violent-parsed_filt.csv`  
   (filtered version of a real-world parolee dataset including charges, sentence dates, and reconviction status)
 
----
 
-Let me know if you'd like to include runnable R script links, citation details, or dataset download instructions.
+
+
