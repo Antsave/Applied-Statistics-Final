@@ -1,3 +1,9 @@
+#Download Packages if needed
+if (!require(ggplot2)) install.packages("ggplot2", dependencies = TRUE)
+
+#Load Packages 
+library(ggplot2)
+
 # Drop NA or negative sentence lengths
 data <- data[!is.na(data$sentence_days) & data$sentence_days >= 0, ]
 
@@ -31,4 +37,20 @@ cat("Total number of people:", total_people, "\n")
 total_by_gender <- rowSums(recid_table)
 cat("Total women:", total_by_gender["Female"], "\n")
 cat("Total men:", total_by_gender["Male"], "\n")
+
+# Example data frame
+reconv_df <- data.frame(
+  sex = c("Female", "Male"),
+  reconvicted = c(331, 1751),
+  total = c(843, 3547)
+)
+
+reconv_df$rate <- reconv_df$reconvicted / reconv_df$total
+
+ggplot(reconv_df, aes(x = sex, y = rate, fill = sex)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  labs(title = "Reconviction Rate by Gender",
+       x = "Gender", y = "Reconviction Rate") +
+  scale_fill_manual(values = c("Female" = "pink", "Male" = "lightblue")) +
+  theme_minimal()
 

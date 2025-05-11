@@ -29,15 +29,46 @@ print(t_result)
 
 # Step 8: Boxplot for visualization
 boxplot(sentence_days ~ sex, data = data,
-        main = "Sentence Length (Days) by Sex",
-        xlab = "Sex", ylab = "Sentence Length (Days)", col = c("lightblue", "pink"))
-
-
-
-# Further analysts  -------------------------------------------------------
-
-boxplot(sentence_days ~ sex, data = data,
         main = "Sentence Length by Gender (Outliers Hidden)",
         xlab = "Sex", ylab = "Sentence Length (Days)",
         col = c("lightpink", "lightblue"),
         outline = FALSE)  # <- hides the outliers
+
+
+# Further analysts  -------------------------------------------------------
+# Step 1: Fit model without 'sex'
+model_no_sex <- lm(sentence_days ~ priors_count + c_charge_desc, data = data)
+# Model with interaction between charge and sex
+model_interaction <- lm(sentence_days ~ priors_count + c_charge_desc * sex, data = data)
+data$predicted_interaction <- predict(model_interaction, newdata = data)
+
+
+# Step 2: Predict sentence length
+data$predicted_sentence <- predict(model_no_sex, newdata = data)
+
+# Step 3: Summarize actual vs predicted sentence length by sex
+summary_by_charge_sex <- data %>%
+  group_by(c_charge_desc, sex) %>%
+  summarise(
+    avg_pred_sentence = mean(predicted_interaction, na.rm = TRUE),
+    count = n()
+  ) %>%
+  filter(count >= 10)  #filters out rare charges
+comparison <- data %>%
+  group_by(sex) %>%
+  summarise(
+    actual_avg = mean(sentence_days, na.rm = TRUE),
+    predicted_avg = mean(predicted_sentence, na.rm = TRUE),
+    avg_diff = actual_avg - predicted_avg,
+    .groups = "drop"
+  )
+
+
+print(comparison)
+
+model_with_sex <- lm(sentence_days ~ priors_count + c_charge_desc + sex, data = data)
+
+# Step 8: ANOVA test comparing the two models
+anova_result <- anova(model_no_sex, model_with_sex)
+print(anova_result)
+
