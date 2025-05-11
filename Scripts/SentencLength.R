@@ -36,4 +36,8 @@ boxplot(sentence_days ~ sex, data = data,
 
 # Further analysts  -------------------------------------------------------
 
-
+boxplot(sentence_days ~ sex, data = data,
+        main = "Sentence Length by Gender (Outliers Hidden)",
+        xlab = "Sex", ylab = "Sentence Length (Days)",
+        col = c("lightpink", "lightblue"),
+        outline = FALSE)  # <- hides the outliers
