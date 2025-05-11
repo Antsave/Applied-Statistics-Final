@@ -66,9 +66,80 @@ comparison <- data %>%
 
 print(comparison)
 
+
 model_with_sex <- lm(sentence_days ~ priors_count + c_charge_desc + sex, data = data)
 
 # Step 8: ANOVA test comparing the two models
 anova_result <- anova(model_no_sex, model_with_sex)
 print(anova_result)
+
+# Step 1: Calculate average sentence length by charge and gender
+sentence_summary <- data %>%
+  group_by(charge_description = c_charge_desc, gender = sex) %>%
+  summarise(
+    avg_sentence_length = mean(sentence_days, na.rm = TRUE),
+    case_count = n(),
+    .groups = "drop"
+  ) %>%
+  filter(case_count >= 10)  # Optional: filter out infrequent charges
+
+# Step 2: Plot side-by-side bar chart
+ggplot(sentence_summary, aes(x = reorder(charge_description, -avg_sentence_length), 
+                             y = avg_sentence_length, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Average Sentence Length by Charge and Gender",
+    x = "Charge Description",
+    y = "Average Sentence Length (Days)",
+    fill = "Gender"
+  ) +
+  theme_minimal()
+
+ggplot(summary_by_charge_sex, aes(x = reorder(c_charge_desc, -avg_pred_sentence), 
+                                  y = avg_pred_sentence, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Predicted Sentence Length by Charge Type and Gender (with Interaction)",
+       x = "Charge Description",
+       y = "Predicted Sentence Length (days)",
+       fill = "Sex") +
+  theme_minimal()
+ggplot(comparison_long, aes(x = sex, y = avg_sentence, fill = type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Actual vs Predicted Sentence Length by Gender",
+    x = "Sex",
+    y = "Average Sentence Length (days)",
+    fill = "Sentence Type"
+  ) +
+  theme_minimal()
+
+# Step 1: Create the comparison table
+sentence_by_charge_sex <- data %>%
+  group_by(c_charge_desc, sex) %>%
+  summarise(
+    avg_sentence = mean(sentence_days, na.rm = TRUE),
+    count = n(),
+    .groups = "drop"
+  ) %>%
+  filter(count >= 10)  # Optional: exclude rare charges
+
+# Step 2: Keep only charges committed by BOTH genders
+shared_charges <- sentence_by_charge_sex %>%
+  group_by(c_charge_desc) %>%
+  filter(n_distinct(sex) == 2) %>%
+  ungroup()
+
+# Step 3: Plot side-by-side bars
+ggplot(shared_charges, aes(x = reorder(c_charge_desc, -avg_sentence), y = avg_sentence, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Average Sentence Length by Charge and Gender (Shared Crimes Only)",
+    x = "Charge Description",
+    y = "Average Sentence Length (days)",
+    fill = "Sex"
+  ) +
+  theme_minimal()
 

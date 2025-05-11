@@ -54,3 +54,4 @@ ggplot(reconv_df, aes(x = sex, y = rate, fill = sex)) +
   scale_fill_manual(values = c("Female" = "pink", "Male" = "lightblue")) +
   theme_minimal()
 
+
